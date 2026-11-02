@@ -84,14 +84,24 @@ export function bottleAt(state: RingTossState, x: number, y: number): Bottle | u
   return state.bottles.find((b) => Math.hypot(x - b.x, y - b.y) <= NECK_RADIUS);
 }
 
+/** Where a ring thrown now at the aim point lands: swayed by the hand, and always ahead of it. */
+export function landingPoint(
+  state: RingTossState,
+  aimX: number,
+  aimY: number,
+): { x: number; y: number } {
+  return { x: aimX + wobble(state.time), y: Math.min(aimY, THROWER.y - 1) };
+}
+
 /** Throws one ring at the aim point, swayed by the hand. Returns false if nothing was thrown. */
 export function toss(state: RingTossState, aimX: number, aimY: number): boolean {
   if (state.phase !== 'playing' || state.ringsLeft === 0) return false;
+  const landing = landingPoint(state, aimX, aimY);
   state.rings.push({
     fromX: THROWER.x,
     fromY: THROWER.y,
-    toX: aimX + wobble(state.time),
-    toY: Math.min(aimY, THROWER.y - 1),
+    toX: landing.x,
+    toY: landing.y,
     age: 0,
   });
   state.ringsLeft -= 1;
@@ -189,14 +199,14 @@ function draw(ctx: CanvasRenderingContext2D, state: RingTossState, aim: { x: num
 
   // Where the next ring would land, swaying with the hand.
   if (state.phase === 'playing' && state.ringsLeft > 0) {
-    const x = aim.x + wobble(state.time);
+    const { x, y } = landingPoint(state, aim.x, aim.y);
     ctx.strokeStyle = colors.danger;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(x - 8, aim.y);
-    ctx.lineTo(x + 8, aim.y);
-    ctx.moveTo(x, aim.y - 8);
-    ctx.lineTo(x, aim.y + 8);
+    ctx.moveTo(x - 8, y);
+    ctx.lineTo(x + 8, y);
+    ctx.moveTo(x, y - 8);
+    ctx.lineTo(x, y + 8);
     ctx.stroke();
   }
 

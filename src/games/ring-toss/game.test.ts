@@ -7,6 +7,7 @@ import {
   WOBBLE,
   bottleAt,
   createState,
+  landingPoint,
   ringPosition,
   step,
   toss,
@@ -49,6 +50,16 @@ describe('ring toss', () => {
     toss(state, 400, 100);
     expect(state.rings[0].toX).toBeCloseTo(400 + wobble(1.3));
     for (let t = 0; t < 5; t += 0.1) expect(Math.abs(wobble(t))).toBeLessThanOrEqual(WOBBLE);
+  });
+
+  it('lands the ring where the preview shows, even when aiming below the hand', () => {
+    const state = createState();
+    state.time = 0.7;
+    const preview = landingPoint(state, 400, 490);
+    expect(preview.y).toBe(THROWER.y - 1);
+    toss(state, 400, 490);
+    expect(state.rings[0].toX).toBe(preview.x);
+    expect(state.rings[0].toY).toBe(preview.y);
   });
 
   it('scores a ring that lands on a bottle neck', () => {
