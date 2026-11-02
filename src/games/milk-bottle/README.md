@@ -8,6 +8,8 @@ Knock down a pyramid of six milk bottles with three balls.
 - Aim left or right by moving the mouse, or with the arrow keys (or A and D).
 - Hold the mouse button or space to charge the power meter, and release to throw.
   The meter climbs to full, then falls back, for as long as you hold.
+  Only releasing the button or key you started with throws, and switching to
+  another window drops the charge without throwing.
 - Power picks the row the ball reaches: a soft throw hits the bottom row, a
   medium one the middle row and a hard one the top bottle. Too soft falls short
   of the table and too hard sails over it; the meter turns red for those.

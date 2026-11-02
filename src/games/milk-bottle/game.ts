@@ -284,19 +284,30 @@ export const milkBottle: CarnivalGame = {
     let steer = 0;
     /** Seconds the throw has been charging, or undefined when not charging. */
     let charge: number | undefined;
+    /** The input that started the charge: only its release throws. */
+    let charger: 'pointer' | 'space' | undefined;
 
-    const begin = () => {
+    const begin = (source: 'pointer' | 'space') => {
       if (state.phase === 'over') {
         state = createState();
         scoreRecorded = false;
-      } else if (!state.ball && state.ballsLeft > 0) {
+      } else if (charge === undefined && !state.ball && state.ballsLeft > 0) {
         charge = 0;
+        charger = source;
       }
     };
-    const release = () => {
-      if (charge === undefined) return;
+    const release = (source: 'pointer' | 'space') => {
+      if (charge === undefined || charger !== source) return;
       throwBall(state, aim, powerFor(charge));
       charge = undefined;
+      charger = undefined;
+    };
+    // A release that happens in another window never reaches this one, so
+    // losing focus drops the steer and the charge without throwing.
+    const onBlur = () => {
+      steer = 0;
+      charge = undefined;
+      charger = undefined;
     };
 
     const onMove = (event: PointerEvent) => {
@@ -306,13 +317,13 @@ export const milkBottle: CarnivalGame = {
     };
     const onDown = (event: PointerEvent) => {
       onMove(event);
-      begin();
+      begin('pointer');
     };
-    const onUp = () => release();
+    const onUp = () => release('pointer');
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === ' ') {
         event.preventDefault();
-        if (!event.repeat) begin();
+        if (!event.repeat) begin('space');
       } else if (event.key === 'ArrowLeft' || event.key === 'a') {
         steer = -1;
       } else if (event.key === 'ArrowRight' || event.key === 'd') {
@@ -320,7 +331,7 @@ export const milkBottle: CarnivalGame = {
       }
     };
     const onKeyUp = (event: KeyboardEvent) => {
-      if (event.key === ' ') release();
+      if (event.key === ' ') release('space');
       else if (['ArrowLeft', 'a', 'ArrowRight', 'd'].includes(event.key)) steer = 0;
     };
     canvas.addEventListener('pointermove', onMove);
@@ -328,6 +339,7 @@ export const milkBottle: CarnivalGame = {
     window.addEventListener('pointerup', onUp);
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
 
     let frame = 0;
     let last = performance.now();
@@ -354,6 +366,7 @@ export const milkBottle: CarnivalGame = {
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
     };
   },
 };
