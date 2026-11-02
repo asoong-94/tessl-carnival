@@ -5,6 +5,7 @@ import {
   SLICE_ANGLE,
   SPINS_PER_ROUND,
   applySlice,
+  cancelCharge,
   createState,
   landingSlice,
   release,
@@ -110,6 +111,27 @@ describe('spin the wheel', () => {
     release(state);
     expect(startCharge(state)).toBe(false);
     expect(release(state)).toBe(false);
+  });
+
+  it('only lets the control that started a charge release it', () => {
+    const state = createState();
+    startCharge(state, 'space');
+    expect(release(state, 'pointer')).toBe(false);
+    expect(state.phase).toBe('charging');
+    expect(release(state, 'space')).toBe(true);
+    expect(state.phase).toBe('spinning');
+  });
+
+  it('drops a cancelled charge without using a spin', () => {
+    const state = createState();
+    startCharge(state, 'space');
+    step(state, 1);
+    expect(cancelCharge(state)).toBe(true);
+    expect(state.phase).toBe('ready');
+    expect(state.charge).toBe(0);
+    expect(state.spinsLeft).toBe(SPINS_PER_ROUND);
+    expect(release(state, 'space')).toBe(false);
+    expect(startCharge(state, 'space')).toBe(true);
   });
 
   it('ends the round after the fifth spin', () => {

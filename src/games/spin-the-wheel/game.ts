@@ -4,6 +4,8 @@ const { width: WIDTH, height: HEIGHT } = theme.canvas;
 
 export const BANKRUPT = 'BANKRUPT';
 export type Slice = number | typeof BANKRUPT;
+/** The control the player is holding to charge a spin. */
+export type Hold = 'pointer' | 'space';
 
 /** The wheel's slices, clockwise from the one under the pointer at angle 0. */
 export const SLICES: readonly Slice[] = [100, 5, 20, 10, 50, 5, BANKRUPT, 10, 20, 5, 50, 10];
@@ -31,6 +33,8 @@ export interface SpinTheWheelState {
   stopAt: number;
   /** Spin power from 0 to 1 while the player is holding. */
   charge: number;
+  /** The control that started the current charge. */
+  hold: Hold | null;
   spinsLeft: number;
   score: number;
   lastSlice: Slice | null;
@@ -43,6 +47,7 @@ export function createState(): SpinTheWheelState {
     speed: 0,
     stopAt: 0,
     charge: 0,
+    hold: null,
     spinsLeft: SPINS_PER_ROUND,
     score: 0,
     lastSlice: null,
@@ -80,20 +85,34 @@ export function applySlice(score: number, slice: Slice): number {
 }
 
 /** Starts charging a spin. Returns false if the wheel can't be spun now. */
-export function startCharge(state: SpinTheWheelState): boolean {
+export function startCharge(state: SpinTheWheelState, hold: Hold = 'pointer'): boolean {
   if (state.phase !== 'ready') return false;
   state.phase = 'charging';
   state.charge = 0;
+  state.hold = hold;
   return true;
 }
 
-/** Lets go of the wheel and spins it with the charged power. */
-export function release(state: SpinTheWheelState): boolean {
-  if (state.phase !== 'charging') return false;
+/**
+ * Lets go of the wheel and spins it with the charged power. Only the control
+ * that started the charge can release it.
+ */
+export function release(state: SpinTheWheelState, hold: Hold = 'pointer'): boolean {
+  if (state.phase !== 'charging' || state.hold !== hold) return false;
+  state.hold = null;
   state.speed = spinSpeed(state.charge);
   state.stopAt = stopAngle(state.angle, state.charge);
   state.spinsLeft -= 1;
   state.phase = 'spinning';
+  return true;
+}
+
+/** Drops a charge without spinning, so the spin isn't used. */
+export function cancelCharge(state: SpinTheWheelState): boolean {
+  if (state.phase !== 'charging') return false;
+  state.phase = 'ready';
+  state.charge = 0;
+  state.hold = null;
   return true;
 }
 
@@ -255,31 +274,35 @@ export const spinTheWheel: CarnivalGame = {
     let state = createState();
     let scoreRecorded = false;
 
-    const press = () => {
+    const press = (hold: Hold) => {
       if (state.phase === 'over') {
         state = createState();
         scoreRecorded = false;
       } else {
-        startCharge(state);
+        startCharge(state, hold);
       }
     };
-    const onDown = () => press();
-    const onUp = () => release(state);
+    const onDown = () => press('pointer');
+    const onUp = () => release(state, 'pointer');
+    // A release can happen in another window, so drop the charge on losing focus.
+    const onBlur = () => cancelCharge(state);
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.code !== 'Space') return;
       event.preventDefault();
-      if (!event.repeat) press();
+      if (!event.repeat) press('space');
     };
     const onKeyUp = (event: KeyboardEvent) => {
       if (event.code !== 'Space') return;
       event.preventDefault();
-      release(state);
+      release(state, 'space');
     };
     canvas.addEventListener('pointerdown', onDown);
     // Listen on the window so letting go off the canvas still spins.
     window.addEventListener('pointerup', onUp);
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('pointercancel', onBlur);
+    window.addEventListener('blur', onBlur);
 
     let frame = 0;
     let last = performance.now();
@@ -303,6 +326,8 @@ export const spinTheWheel: CarnivalGame = {
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('pointercancel', onBlur);
+      window.removeEventListener('blur', onBlur);
     };
   },
 };
