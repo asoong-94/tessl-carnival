@@ -107,6 +107,14 @@ export function release(state: SkeeBallState): boolean {
   return true;
 }
 
+/** Drops the charge without rolling, so no ball is used. Returns false if nothing was charging. */
+export function cancelCharge(state: SkeeBallState): boolean {
+  if (!state.charging) return false;
+  state.charging = false;
+  state.power = 0;
+  return true;
+}
+
 /** Advances the game by `dt` seconds. */
 export function step(state: SkeeBallState, dt: number): void {
   if (state.charging) state.power = Math.min(1, state.power + CHARGE_RATE * dt);
@@ -275,6 +283,12 @@ export const skeeBall: CarnivalGame = {
       press();
     };
     const onUp = () => release(state);
+    // A release that happens elsewhere never arrives, so drop held input instead.
+    const onInterrupt = () => {
+      keys.left = false;
+      keys.right = false;
+      cancelCharge(state);
+    };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.code === 'Space') {
         event.preventDefault();
@@ -293,6 +307,8 @@ export const skeeBall: CarnivalGame = {
     canvas.addEventListener('pointermove', onMove);
     canvas.addEventListener('pointerdown', onDown);
     window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onInterrupt);
+    window.addEventListener('blur', onInterrupt);
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
 
@@ -318,6 +334,8 @@ export const skeeBall: CarnivalGame = {
       canvas.removeEventListener('pointermove', onMove);
       canvas.removeEventListener('pointerdown', onDown);
       window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onInterrupt);
+      window.removeEventListener('blur', onInterrupt);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
     };

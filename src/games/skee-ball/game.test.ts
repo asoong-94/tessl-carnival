@@ -4,6 +4,7 @@ import {
   MIN_POWER,
   POCKET_POINTS,
   ROLL_TIME,
+  cancelCharge,
   createState,
   landingFor,
   release,
@@ -56,6 +57,20 @@ describe('skee-ball', () => {
     step(state, ROLL_TIME);
     expect(state.score).toBe(landingFor(0, 0.4).points);
     expect(state.roll).toBeNull();
+  });
+
+  it('cancels an interrupted charge without using a ball', () => {
+    const state = createState();
+    startCharge(state);
+    step(state, 0.5);
+    expect(cancelCharge(state)).toBe(true);
+    expect(state.charging).toBe(false);
+    expect(state.power).toBe(0);
+    expect(state.balls).toBe(BALLS_PER_ROUND);
+    step(state, 1);
+    expect(state.power).toBe(0);
+    expect(release(state)).toBe(false);
+    expect(cancelCharge(state)).toBe(false);
   });
 
   it('cannot roll another ball while one is on the ramp', () => {

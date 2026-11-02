@@ -9,6 +9,7 @@ Roll nine balls up the ramp and into the rings on the board.
 - Power decides how far up the board the ball goes, and aim decides how far left or right.
   The power meter on the right has a mark: below it, the ball drops in the gutter.
 - You have 9 balls. The round ends when the last ball lands.
+- If you switch away from the game while charging, the charge is dropped and you keep the ball.
 - Click or press space on the game over screen to play another round.
 
 ## Scoring
@@ -26,5 +27,5 @@ Your final score is saved to the carnival's score board when the round ends.
 ## Files
 
 - `game.ts`: the game logic (`createState`, `landingFor`, `setAim`, `startCharge`,
-  `release`, `step`) and the `skeeBall` entry, the default export the midway finds.
+  `release`, `cancelCharge`, `step`) and the `skeeBall` entry, the default export the midway finds.
 - `game.test.ts`: tests for the game logic.
