@@ -112,6 +112,11 @@ export function throwDart(state: BalloonDartsState, x: number, y: number): numbe
   return points;
 }
 
+/** Whether the round has ended. */
+export function isOver(state: BalloonDartsState): boolean {
+  return state.phase === 'over';
+}
+
 /** Advances the game by `dt` seconds. */
 export function step(state: BalloonDartsState, dt: number): void {
   if (state.phase !== 'playing') return;
@@ -229,7 +234,6 @@ export const balloonDarts: CarnivalGame = {
     canvas.height = HEIGHT;
 
     let state = createState();
-    let scoreRecorded = false;
     const aim = { x: BOARD.x, y: BOARD.y };
 
     const toCanvas = (event: PointerEvent) => {
@@ -242,12 +246,13 @@ export const balloonDarts: CarnivalGame = {
     const onMove = (event: PointerEvent) => Object.assign(aim, toCanvas(event));
     const onDown = (event: PointerEvent) => {
       Object.assign(aim, toCanvas(event));
-      if (state.phase === 'over') {
+      if (isOver(state)) {
         state = createState();
-        scoreRecorded = false;
-      } else {
-        throwDart(state, aim.x, aim.y);
+        return;
       }
+      throwDart(state, aim.x, aim.y);
+      // Record the moment the round ends, so a restart or leaving can't lose it.
+      if (isOver(state)) recordScore(balloonDarts.id, state.score);
     };
     canvas.addEventListener('pointermove', onMove);
     canvas.addEventListener('pointerdown', onDown);
@@ -259,10 +264,6 @@ export const balloonDarts: CarnivalGame = {
       const dt = Math.min((time - last) / 1000, 0.05);
       last = time;
       step(state, dt);
-      if (state.phase === 'over' && !scoreRecorded) {
-        recordScore(balloonDarts.id, state.score);
-        scoreRecorded = true;
-      }
       draw(ctx, state, aim);
       frame = requestAnimationFrame(loop);
     };
